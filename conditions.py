@@ -163,10 +163,10 @@ def desc_columns():
         'Ox Num_Oxide', 'E_form_Ox', 'Density_Ox', 'BG_Oxide',
         'Ox Num_Precursor', 'MW_Precursor', 'Solubility', 'Valency'
         ]
-    
+
     noble_gas = ['He', 'Ne', 'Ar', 'Kr', 'Xe']
     pgm_plus_ReAu = ['H', 'Ru', 'Rh', 'Pd', 'Re', 'Os', 'Ir', 'Pt', 'Au']
-    
+
     # 'Re' is treated as Additives.
     drop_elems = [
         'Be', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'Cl', 'As', 'Se',
