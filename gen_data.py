@@ -129,7 +129,6 @@ def make_catal_cand(condition, converted):
         elem_combination = np.array(elem_combination)
 
     elem_wt = list(itertools.product(add_wt, repeat=cand_add_num))
-    #elem_wt = np.array(elem_wt_add).reshape(len(elem_wt_add), -1)
 
     if cand_add_num != 0 and add_model == 0:
         add_vect = [pd.DataFrame(columns=add_desc.index[1:], index=np.arange(len(elem_combination))).fillna(0) for i in range(cand_add_num)]
@@ -247,15 +246,6 @@ def cand_str(cand, cand_add_num, cand_wt_cols):
         cand_Ad4 = cand['Ad4'].str.cat([cand['Ad4_wt%']], sep=' ')
         cand_Ad5 = cand['Ad5'].str.cat([cand['Ad5_wt%']], sep=' ')
         cand['Top catal.'] = cand_Ad1.str.cat([cand_Ad2, cand_Ad3, cand_Ad4, cand_Ad5],  sep=', ')
-
-    elif cand_add_num == 6:
-        cand_Ad1 = cand['Ad1'].str.cat([cand['Ad1_wt%']], sep=' ')
-        cand_Ad2 = cand['Ad2'].str.cat([cand['Ad2_wt%']], sep=' ')
-        cand_Ad3 = cand['Ad3'].str.cat([cand['Ad3_wt%']], sep=' ')
-        cand_Ad4 = cand['Ad4'].str.cat([cand['Ad4_wt%']], sep=' ')
-        cand_Ad5 = cand['Ad5'].str.cat([cand['Ad5_wt%']], sep=' ')
-        cand_Ad6 = cand['Ad6'].str.cat([cand['Ad6_wt%']], sep=' ')
-        cand['Top catal.'] = cand_Ad1.str.cat([cand_Ad2, cand_Ad3, cand_Ad4, cand_Ad5, cand_Ad6],  sep=', ')
 
     cand[cand_wt_cols] = cand[cand_wt_cols].astype(float)
     return cand
