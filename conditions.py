@@ -18,7 +18,7 @@ def calc_condition():
     test_cal = True # default: False
     data_sheet_name = 'test_data'
     train_data_sheet_name = 'train_data'
-    ML_model = 'ETR' # or 'RFR'
+    ML_model = 'ETR' # Now, only support ETR
     
     ### Define ML model (0: conv, 1: prop1, 2: prop2) ###
     add_model = 2
@@ -32,25 +32,20 @@ def calc_condition():
     save_depth = 100                   # if save_depth == -1: full depth
     catal_number = 100
     K_cluster = 100
-    # 0-1. Option of extractions.
-    extractions = []
     
     ### Define the inpot catalytic compositions ###
 
     # 1. Additives
-    cand_add_num = 4
-    add_wt = [0, 0.2, 0.5, 0.7, 1.0, 1.2, 1.5, 2]
+    cand_add_num = 5
+    add_wt = [0, 0.5, 1, 2, 3, 5, 7, 10]
     fix_add_num = 0                     # 0, 1, 2, ..., max_add_num-1
-    essential_adds = [] # ['V', 'Ce', 'Nb', 'Rb', 'Mo', 'Ba', 'Re']                 # if fix_add_num == 0: this list has no meaning.
-    essential_add_wt = []
+    essential_adds = [] # for example ['V', 'Ce', 'Nb', 'Rb', 'Mo', 'Ba', 'Re'] <- if fix_add_num == 0: this list has no meaning.
 
-    
     ### Define target name ###
     target_name = 'CO formation rate_mmol min-1 gcat-1'
     
     if test_cal == True:
         add_wt = [1]
-        essential_add_wt = [1]
     else:
         pass
 
@@ -58,10 +53,8 @@ def calc_condition():
         'date': date, 'computer': computer, 'core': core, 'Reaction': Reaction, 'hyper_threading': hyper_threading,
         'data_sheet_name': data_sheet_name, 'train_data_sheet_name': train_data_sheet_name,
         'ML_model': ML_model, 'add_model': add_model, 'Search_method': Search_method,
-        'cand_add_num': cand_add_num, 'add_num': add_num, 'add_wt': add_wt, 'fix_add_num': fix_add_num,
-        'essential_adds': essential_adds, 'essential_add_wt': essential_add_wt,
-        'save_depth': save_depth, 'catal_number': catal_number, 'K_cluster': K_cluster, 'extractions': extractions,
-        'target_name': target_name
+        'cand_add_num': cand_add_num, 'add_num': add_num, 'add_wt': add_wt, 'fix_add_num': fix_add_num, 'essential_adds': essential_adds,
+        'save_depth': save_depth, 'catal_number': catal_number, 'K_cluster': K_cluster, 'target_name': target_name
         }
     return condition
 
@@ -134,9 +127,9 @@ def data_columns(condition):
         ]
     data_labels = [
         'No.',
-        'Ad1', 'Ad1_wt%', 'Ad2', 'Ad2_wt%', 'Ad3', 'Ad3_wt%', 'Ad4', 'Ad4_wt%','Ad5', 'Ad5_wt%', #'Support_name',
+        'Ad1', 'Ad1_wt%', 'Ad2', 'Ad2_wt%', 'Ad3', 'Ad3_wt%', 'Ad4', 'Ad4_wt%','Ad5', 'Ad5_wt%',
         'CO Yield_%','CO formation rate_mmol min-1 gcat-1',
-        'Iteration', 'Catal prep', 'Reaction', 'Note', 'Experimantal condition'
+        'Iteration',
         ]
     use_add_desc = [ # 'AW' is not used as Descriptor.
         'Group', 'AW', 'EN_Allred', 'm.p.', 'd_fus_H',
@@ -184,14 +177,6 @@ def desc_columns():
         'O 5d pot', 'O 5f pot', 'P 6s pot', 'P 6p pot', 'P 6d pot'
         ]
 
-    supp_desc_columns = [ # index_col = 'Support_name'
-        'Compound', 'Structure', 'Surface (Support)', 'MW (Support)', 'Evac (Support)', 'Bulk_EN (Support)', 'E_form (Support)', 'Density (Support)',
-        'Dielect Prop (Support)', 'Elasticity (Support)', 'BG (Support)', 'Surf E (Support)', 'Ion Pot (Support)', 'EA (Support)', 'WF (Support)',
-        'SSA (Support)', 'SSA cal at 700C (Support)', 'SiO2/Al2O3 ratio (Support)', 'Pore size (Support)', 'Cation (Support)',
-        'rwgs_250', 'rwgs_250_1st', 'rwgs_300', 'CH3OH', 'EtOH_CO2', 'EtOH_CO', 'H2SCR', 'NH3SCR', 'N2O', 'CH4',
-        'Source','Sample name', 'Note', 'Ref'
-        ]
-
     basic_desc_columns = [
         'AN', 'Group', 'Period', 'AW',
         'Atom rad', 'Ion rad', 'Coval rad', 'vdW rad', 'Crys rad',
@@ -234,7 +219,7 @@ def desc_columns():
 
     desc_cols = {
         'noble_gas': noble_gas, 'pgm_plus_ReAu': pgm_plus_ReAu, 'drop_elems': drop_elems, 'all_desc_columns': all_desc_columns,
-        'basic_desc_columns': basic_desc_columns, 'supp_desc_columns': supp_desc_columns, 'Metal_space_group': Metal_space_group,
+        'basic_desc_columns': basic_desc_columns, 'Metal_space_group': Metal_space_group,
         'Counter_ions': Counter_ions, 'electron_config': electron_config, 'potcar_config': potcar_config,
         }
 

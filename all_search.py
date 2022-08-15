@@ -257,14 +257,6 @@ if idx_to == total_num:
     subprocess.call(f"python sum_k_clus.py -k {K_cluster}", shell=True)
     print('All calculations and K-cluster calculations have been successfully completed !!')
     
-    extractions = condition['extractions']
-    if len(extractions) != 0:
-        for i in range(len(extractions)):
-            subprocess.call(f"python extract.py -ex {extractions[i]}", shell=True)
-            print(f'K-clustering was attempted by extracting candidate catalysts that contained {extractions[i]}.')
-    else:
-        print('Extractions were NOT performed...')
-    
     print('ML analysis start...')
     PATH = 'Figures'
     os.makedirs(PATH, exist_ok = True)
