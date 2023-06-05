@@ -42,40 +42,54 @@ Search_method = condition['Search_method']
 
 data_file_name = f'data/{date}_{Reaction}_dataset.xlsx'
 data_sheet_name = condition['data_sheet_name']
+skip_rows = condition['skip_rows']
 desc_file_name = 'data/Descriptors.xlsx'
 elem_desc_sheet = 'Descriptors'
+supp_desc_sheet = 'Descriptors_supp'
 
-data_cols = conditions.data_columns(condition)
+data_cols = conditions.data_columns(Reaction, condition)
 cand_elem_cols = data_cols['cand_elem']
 cand_wt_cols = data_cols['cand_wt']
 cand_labels = data_cols['cand_labels']
-target_name = condition['target_name']
 
-add_model = condition['add_model']
-cand_add_num = condition['cand_add_num']
-fix_add_num = condition['fix_add_num']
-essential_adds = condition['essential_adds']
-add_wt = condition['add_wt']
+if Reaction == 'rwgs_250' or Reaction == 'rwgs_300' or Reaction == 'CH3OH':
+        target_name = condition['target_name']
+elif Reaction == 'N2O' or Reaction == 'H2SCR' or Reaction == 'NH3SCR' or Reaction == 'CH4':
+        target_temp = condition['target_temp']
 
+pgm_model, add_model, supp_model = condition['pgm_model'], condition['add_model'], condition['supp_model']
+cand_pgm_num, cand_add_num, cand_supp_num, CalT_num  = condition['cand_pgm_num'], condition['cand_add_num'], condition['supp_num'], condition['CalT_num']
+fix_pgm_num, fix_add_num, fix_supp_num = condition['fix_pgm_num'], condition['fix_add_num'], condition['fix_supp_num']
+essential_pgms, essential_adds, essential_supp = condition['essential_pgms'], condition['essential_adds'], condition['essential_supp']
 
-desc_cols = conditions.desc_columns()
+max_pgm_wt = condition['max_pgm_wt']
+essential_pgm_wt = condition['essential_pgm_wt']
+pgm_wt, add_wt = condition['pgm_wt'], condition['add_wt']
+
+if CalT_num == 1:
+        CalT_list = condition['CalT_list']
+else:
+        pass
+
+desc_cols = conditions.desc_columns(Reaction)
+pgm_plus_ReAu = desc_cols['pgm_plus_ReAu']
 basic_desc_cols = desc_cols['basic_desc_columns']
 noble_gas = desc_cols['noble_gas']
 drop_elems = desc_cols['drop_elems']
 
 desc = conditions.use_desc()
-add_use_desc = desc['add']
+pgm_use_desc, add_use_desc, supp_use_desc = desc['pgm'], desc['add'], desc['supp']
 
-### Top XX catalysts OUTPUT Files ###
-out_csv_file_top = f'results/{date}_{Reaction}_cand_sum_{ML_model}_prop{add_model}_{Search_method}.csv'
-fig_title_top = f'{date}_{Reaction}_{ML_model}_prop{add_model}_{Search_method}_top{catal_number}'
-out_fig_name_top = f'results/{date}_{Reaction}_{ML_model}_prop{add_model}_{Search_method}_top{catal_number}.png'
-cand_data = out_csv_file_top
+### Top 40 catalysts OUTPUT Files ###
+out_csv_file_top = f'results/{date}_{Reaction}_cand_sum_{ML_model}_prop{pgm_model}{add_model}{supp_model}_{Search_method}.csv'
+fig_title_top = f'{date}_{Reaction}_{ML_model}_prop{pgm_model}{add_model}{supp_model}_{Search_method}_top{catal_number}'
+out_fig_name_top = f'results/{date}_{Reaction}_{ML_model}_prop{pgm_model}{add_model}{supp_model}_{Search_method}_top{catal_number}.png'
+cand_data = f'results/{date}_{Reaction}_cand_sum_{ML_model}_prop{pgm_model}{add_model}{supp_model}_{Search_method}.csv' # == results_csv_file_top
 
-### K-mean XX catalysts OUTPUT Files ###
-out_csv_file_K = f"results/{date}_{Reaction}_{ML_model}_prop{add_model}_{Search_method}_K{K_cluster}.csv"
-fig_title_K = f'{date}_{Reaction}_{ML_model}_prop{add_model}_{Search_method}_K{K_cluster}'
-out_fig_name_K = f"results/{date}_{Reaction}_{ML_model}_prop{add_model}_{Search_method}_K{K_cluster}.png"
+### K-mean 40 catalysts OUTPUT Files ###
+out_csv_file_K = f"results/{date}_{Reaction}_K{K_cluster}_{ML_model}_prop{pgm_model}{add_model}{supp_model}_{Search_method}.csv"
+fig_title_K = f'{date}_{Reaction}_K{K_cluster}_{ML_model}_prop{pgm_model}{add_model}{supp_model}_{Search_method}'
+out_fig_name_K = f"results/{date}_{Reaction}_K{K_cluster}_{ML_model}_prop{pgm_model}{add_model}{supp_model}_{Search_method}.png"
 
 csv_files = glob.glob('cand/*.csv')
 data_list = []
@@ -93,7 +107,7 @@ feat, target = converted['feat'], converted['target']
 
 cand = gen_data.cand_separation(cand_data)
 print('cand_separation:', cand.shape)
-cand = gen_data.cand_str(cand, cand_add_num, cand_wt_cols)
+cand = gen_data.cand_str(cand, cand_pgm_num, cand_add_num, cand_supp_num, CalT_num, cand_wt_cols)
 
 top_catal = cand.sort_values("ei")
 top_catal = top_catal.iloc[-catal_number:, :]
@@ -220,16 +234,15 @@ model.fit(feat, target)
 k = KMeans(n_clusters=K_cluster, random_state = 1107)
 cluster = k.fit_predict(cand.loc[:, cand_wt_cols])
 cluster = pd.Series(cluster, index=cand.index, name='cluster')
-cand_top = cand.copy()
-cand = pd.concat([cand, cluster], axis=1)
-cand = cand.sort_values(by=['cluster','ei']).drop_duplicates(subset=['cluster'],keep='last')
-cand = cand.sort_values(by='ei', ascending=False)
-cand.to_csv(out_csv_file_K)
-print(f'cand_K{K_cluster}_shape:', cand.shape)
-cand = gen_data.cand_str(cand, cand_add_num, cand_wt_cols)
+cand_clus = pd.concat([cand, cluster], axis=1)
+clus_high = cand_clus.sort_values(by=['cluster','ei']).drop_duplicates(subset=['cluster'],keep='last')
+clus_high = clus_high.sort_values(by='ei', ascending=False)
+clus_high.to_csv(out_csv_file_K)
+print('clus_high_shape:', clus_high.shape)
+clus_high = gen_data.clus_high_str(clus_high, cand_pgm_num, cand_add_num, cand_supp_num, CalT_num, cand_wt_cols)
 
-K_catal = cand.sort_values('ei')
-K_catal = cand.iloc[-K_cluster:, :]
+K_catal = clus_high.sort_values("ei")
+K_catal = clus_high.iloc[-K_cluster:, :]
 x_K = np.arange(len(K_catal))
 
 if K_cluster <= 50:

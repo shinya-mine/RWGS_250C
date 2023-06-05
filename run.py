@@ -27,11 +27,12 @@ computer = condition['computer']
 core, hyper_threading = condition['core'], condition['hyper_threading']
 Reaction = condition['Reaction']
 Search_method = condition['Search_method']
-data_cols = conditions.data_columns(condition)
+data_cols = conditions.data_columns(Reaction, condition)
+
 
 if Search_method == 'all':
     job_title = 'A'
-elif Search_method == 'all':
+else:
     job_title = 'L'
 
 if hyper_threading == True:
@@ -39,9 +40,9 @@ if hyper_threading == True:
 else:
     threads = 1 * core
 
-add_model = condition['add_model']
+pgm_model, add_model, supp_model = condition['pgm_model'], condition['add_model'], condition['supp_model']
 
-num_elem_wt = gen_data.elem_wt(condition)
+num_elem_wt = gen_data.elem_wt(condition, data_cols)
 print('num_elem_wt =', num_elem_wt)
 
 def divisors_list(num):
@@ -69,8 +70,14 @@ print('job_size =', int(num_elem_wt/num_of_jobs))
 
 subprocess.call("mkdir job log out err", shell=True)
 
-if Reaction == 'rwgs_250':
+if Reaction == 'rwgs_250' or Reaction == 'rwgs_250_1wt' or Reaction == 'rwgs_300':
     Reaction = 'RWGS'
+elif Reaction == 'H2SCR':
+    Reaction = 'H2'
+elif Reaction == 'NH3SCR':
+    Reaction = 'NH3'
+elif Reaction == 'EtOH_CO' or Reaction == 'EtOH_CO2':
+    Reaction = 'EtOH'
 else:
     pass
 
@@ -85,8 +92,8 @@ f'#!/bin/bash\n\
 #QSUB -q gr10414a\n\
 #QSUB -ug gr10414\n\
 #QSUB -W 336:00\n\
-#QSUB -A p=1:t={core}:c={core}:m=92160M\n\
-#QSUB -N {Reaction}_{job_title}_p{add_model}_{i}\n\
+#QSUB -A p=1:t={threads}:c={core}:m=92160M\n\
+#QSUB -N {Reaction}_{job_title}_p{pgm_model}{add_model}{supp_model}_{i}\n\
 #QSUB -r n\n\
 #QSUB -o out/out_{i}\n\
 #QSUB -e err/err_{i}\n\
@@ -94,7 +101,7 @@ f'#!/bin/bash\n\
 ulimit -s unlimited\n\
 cd $PBS_O_WORKDIR\n\
 \n\
-aprun -n $QSUB_PROCS -d $QSUB_THREADS -N $QSUB_PPN python {Search_method}_search.py --from {j[0]} --to {j[1]} --workers {core} --data_dump data_dump --cat_dump cat_dump --csv_name cand_{i} > log/log_cand_{i}',
+aprun -n $QSUB_PROCS -d $QSUB_THREADS -N $QSUB_PPN python {Search_method}_search.py --from {j[0]} --to {j[1]} --workers {threads} --pkl_name catal_dump --csv_name cand_{i} > log/log_cand_{i}',
             file=f
             )
         subprocess.call(f"qsub run{computer}_{i}.sh", shell=True)
@@ -111,7 +118,7 @@ f'#!/bin/bash\n\
 #QSUB -ug gr10414\n\
 #QSUB -W 336:00\n\
 #QSUB -A p=1:t={threads}:c={core}:m=122880M\n\
-#QSUB -N {Reaction}_{job_title}_p{add_model}_{i}\n\
+#QSUB -N {Reaction}_{job_title}_p{pgm_model}{add_model}{supp_model}_{i}\n\
 #QSUB -r n\n\
 #QSUB -o out/out_{i}\n\
 #QSUB -e err/err_{i}\n\
@@ -119,7 +126,7 @@ f'#!/bin/bash\n\
 #ulimit -s unlimited\n\
 cd $PBS_O_WORKDIR\n\
 \n\
-mpiexec.hydra python {Search_method}_search.py --from {j[0]} --to {j[1]} --workers {core} --data_dump data_dump --cat_dump cat_dump --csv_name cand_{i} > log/log_cand_{i}',
+mpiexec.hydra python {Search_method}_search.py --from {j[0]} --to {j[1]} --workers {threads} --pkl_name catal_dump --csv_name cand_{i} > log/log_cand_{i}',
             file=f
             )
         subprocess.call(f"qsub run{computer}_{i}.sh", shell=True)
@@ -131,30 +138,20 @@ elif computer == 'I':
         with open(f'run{computer}_{i}.sh', 'w') as f:
             print(
 f'#!/bin/bash\n\
-#============ pjsub Options ===================\n\
-#PJM -L "rscunit=ito-a"\n\
-#PJM -L "rscgrp=ito-a-oc180150"\n\
-#PJM -L "vnode=1"\n\
-#PJM -L "vnode-core={core}"\n\
-#PJM -L "elapse=168:00:00"\n\
-#PJM -N {Reaction}_{i}_p{add_model}\n\
-#PJM --no-stging\n\
-#PJM --spath out/stat_{i}\n\
-#PJM -o out/out_{i}\n\
-#PJM -e err/err_{i}\n\
-#PJM -S\n\
-#PJM --restart\n\
-#============ Shell Script ===================\n\
-newgrp  oc180150\n\
-LANG=C\n\
+#============ PBS Options ============\n\
+#QSUB -q gr10414b\n\
+#QSUB -ug gr10414\n\
+#QSUB -W 336:00\n\
+#QSUB -A p=1:t={threads}:c={core}:m=122880M\n\
+#QSUB -N {Reaction}_{job_title}_p{pgm_model}{add_model}{supp_model}_{i}\n\
+#QSUB -r n\n\
+#QSUB -o out/out_{i}\n\
+#QSUB -e err/err_{i}\n\
+#============ Shell Script ============\n\
+#ulimit -s unlimited\n\
+cd $PBS_O_WORKDIR\n\
 \n\
-cd $PJM_O_WORKDIR\n\
-export I_MPI_HYDRA_BOOTSTRAP_EXEC=pjrsh\n\
-export I_MPI_HYDRA_HOST_FILE=$PJM_O_NODEINF\n\
-export I_MPI_DEVICE=rdma\n\
-export I_MPI_PERHOST={core}\n\
-\n\
-python {Search_method}_search.py --from {j[0]} --to {j[1]} --workers {core} --data_dump data_dump --cat_dump cat_dump --csv_name cand_{i} > log/log_cand_{i}',
+mpiexec.hydra python {Search_method}_search.py --from {j[0]} --to {j[1]} --workers {core} --pkl_name catal_dump --csv_name cand_{i} > log/log_cand_{i}',
             file=f
             )
         subprocess.call(f"pjsub run{computer}_{i}.sh", shell=True)
@@ -163,6 +160,6 @@ elif computer == 'local':
     for i, j in enumerate(zip(
         np.arange(0, num_elem_wt+(num_elem_wt/num_of_jobs), num_elem_wt/num_of_jobs, dtype=int),
         np.arange(num_elem_wt/num_of_jobs, num_elem_wt+(num_elem_wt/num_of_jobs), num_elem_wt/num_of_jobs, dtype=int)), 1):
-        subprocess.call(f"python {Search_method}_search.py --from {j[0]} --to {j[1]} --workers {core} --data_dump data_dump --cat_dump cat_dump --csv_name cand_{i} > log/log_cand_{i}", shell=True)
+        subprocess.call(f"python {Search_method}_search.py --from {j[0]} --to {j[1]} --workers {core} --pkl_name catal_dump --csv_name cand_{i} > log/log_cand_{i}", shell=True)
 
 subprocess.call(f"mv run{computer}_* job/", shell=True)

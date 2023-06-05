@@ -9,9 +9,7 @@ from humanfriendly import format_size
 import scipy.sparse as sparse
 from scipy.stats import norm
 import os, sys
-import os.path
 sys.dont_write_bytecode = True
-from pathlib import Path
 
 import pickle
 import subprocess
@@ -32,8 +30,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--workers', type=int, default=1)
 parser.add_argument('--from', type=int, default=0)
 parser.add_argument('--to', type=int, default=1000)
-parser.add_argument('--data_dump', type=str, default='data_dump')
-parser.add_argument('--cat_dump', type=str, default='cat_dump')
+parser.add_argument('--pkl_name', type=str, default='catal_dump')
 parser.add_argument('--csv_name', type=str, default="cand_0")
 
 args = vars(parser.parse_args())
@@ -42,8 +39,7 @@ num_workers = args['workers']
 idx_from = args['from']
 idx_to = args['to']
 csv_name = args['csv_name']
-data_dump_name = args['data_dump']
-cat_dump_name = args['cat_dump']
+pkl_name = args['pkl_name']
 
 @contextmanager
 def timer(name, alpha=None):
@@ -75,22 +71,127 @@ condition = conditions.calc_condition()
 Reaction = condition['Reaction']
 print(Reaction)
 
-def EI(mu, sigma, cur_max):
-    Z = (mu - cur_max) / sigma
-    ei = (mu - cur_max) * norm.cdf(Z) + sigma*norm.pdf(Z) # pdf == Probability Density Function
+def EI(mu, sigma, cur_min, cur_max):
+    if Reaction == 'N2O' or Reaction == 'H2SCR' or Reaction == 'NH3SCR' or Reaction == 'CH4' or Reaction == 'EtOH_CO2' or Reaction == 'EtOH_CO':
+        Z = (cur_min - mu) / sigma
+        ei = (cur_min - mu) * norm.cdf(Z) + sigma*norm.pdf(Z)
+    elif Reaction == 'rwgs_250' or Reaction == 'rwgs_250_1wt' or Reaction == 'rwgs_300' or Reaction == 'CH3OH':
+        Z = (mu - cur_max) / sigma
+        ei = (mu - cur_max) * norm.cdf(Z) + sigma*norm.pdf(Z)
     return ei
 
 def encode(comps, ele):
-    if cand_add_num == 2:
-        return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}"
-    elif cand_add_num == 3:
-        return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}"
-    elif cand_add_num == 4:
-        return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}"
-    elif cand_add_num == 5:
-        return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}"
-    elif cand_add_num == 6:
-        return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}"
+    if CalT_num == 0:
+        if cand_pgm_num == 0 and cand_add_num == 2 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]}"
+        elif cand_pgm_num == 0 and cand_add_num == 2 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}"
+        elif cand_pgm_num == 0 and cand_add_num == 3 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]}"
+        elif cand_pgm_num == 0 and cand_add_num == 3 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}"
+        elif cand_pgm_num == 0 and cand_add_num == 4 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]}"
+        elif cand_pgm_num == 0 and cand_add_num == 4 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}"
+        elif cand_pgm_num == 0 and cand_add_num == 5 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]}"
+        elif cand_pgm_num == 0 and cand_add_num == 5 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}"
+        elif cand_pgm_num == 0 and cand_add_num == 6 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]}"
+        elif cand_pgm_num == 0 and cand_add_num == 6 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}"
+        
+        elif cand_pgm_num == 1 and cand_add_num == 2 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]}"
+        elif cand_pgm_num == 1 and cand_add_num == 2 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}"
+        elif cand_pgm_num == 1 and cand_add_num == 3 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]}"
+        elif cand_pgm_num == 1 and cand_add_num == 3 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}"
+        elif cand_pgm_num == 1 and cand_add_num == 4 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]}"
+        elif cand_pgm_num == 1 and cand_add_num == 4 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}"
+        elif cand_pgm_num == 1 and cand_add_num == 5 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]}"
+        elif cand_pgm_num == 1 and cand_add_num == 5 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}"
+        
+        elif cand_pgm_num == 2 and cand_add_num == 2 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]}"
+        elif cand_pgm_num == 2 and cand_add_num == 2 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}"
+        elif cand_pgm_num == 2 and cand_add_num == 3 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]}"
+        elif cand_pgm_num == 2 and cand_add_num == 3 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}"
+        elif cand_pgm_num == 2 and cand_add_num == 4 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]}"
+        elif cand_pgm_num == 2 and cand_add_num == 4 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}"
+        elif cand_pgm_num == 2 and cand_add_num == 5 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}, {ele[7]}"
+        elif cand_pgm_num == 2 and cand_add_num == 5 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}"
+        
+        elif cand_pgm_num == 3 and cand_add_num == 2 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]}"
+        elif cand_pgm_num == 3 and cand_add_num == 2 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}"
+        elif cand_pgm_num == 3 and cand_add_num == 3 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]}"
+        elif cand_pgm_num == 3 and cand_add_num == 3 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}"
+        elif cand_pgm_num == 3 and cand_add_num == 4 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}, {ele[7]}"
+        elif cand_pgm_num == 3 and cand_add_num == 4 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}"
+        elif cand_pgm_num == 3 and cand_add_num == 5 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}, {ele[7]} {comps[7]}, {ele[8]}"
+        elif cand_pgm_num == 3 and cand_add_num == 5 and cand_supp_num == 0:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}, {ele[7]} {comps[7]}"
+        
+    elif CalT_num == 1:
+        if cand_pgm_num == 0 and cand_add_num == 2 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]}, {ele[3]}"
+        elif cand_pgm_num == 0 and cand_add_num == 3 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]}, {ele[4]}"
+        elif cand_pgm_num == 0 and cand_add_num == 4 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]}, {ele[5]}"
+        elif cand_pgm_num == 0 and cand_add_num == 5 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]}, {ele[6]}"
+        elif cand_pgm_num == 0 and cand_add_num == 6 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]}, {ele[7]}"
+
+        elif cand_pgm_num == 1 and cand_add_num == 2 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]}, {ele[4]}"
+        elif cand_pgm_num == 1 and cand_add_num == 3 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]}, {ele[5]}"
+        elif cand_pgm_num == 1 and cand_add_num == 4 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]}, {ele[6]}"
+        elif cand_pgm_num == 1 and cand_add_num == 5 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]}, {ele[7]}"
+        
+        elif cand_pgm_num == 2 and cand_add_num == 2 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]}, {ele[5]}"
+        elif cand_pgm_num == 2 and cand_add_num == 3 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]}, {ele[6]}"
+        elif cand_pgm_num == 2 and cand_add_num == 4 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]}, {ele[7]}"
+        elif cand_pgm_num == 2 and cand_add_num == 5 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}, {ele[7]}, {ele[8]}"
+        
+        elif cand_pgm_num == 3 and cand_add_num == 2 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]}, {ele[6]}"
+        elif cand_pgm_num == 3 and cand_add_num == 3 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]}, {ele[7]}"
+        elif cand_pgm_num == 3 and cand_add_num == 4 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}, {ele[7]}, {ele[8]}"
+        elif cand_pgm_num == 3 and cand_add_num == 5 and cand_supp_num == 1:
+            return f"{ele[0]} {comps[0]}, {ele[1]} {comps[1]}, {ele[2]} {comps[2]}, {ele[3]} {comps[3]}, {ele[4]} {comps[4]}, {ele[5]} {comps[5]}, {ele[6]} {comps[6]}, {ele[7]} {comps[7]}, {ele[8]}, {ele[9]}"
 
 def get_encode(idx, comps):
     return [encode(comps, ele) for ele in catal_comb[idx]]
@@ -108,24 +209,66 @@ def pred_std_csr(X, trees, predictions, min_variance=0.0):
     std = std ** 0.5
     return std
 
-def calc_ei(elem_wt):
+def calc_ei(elem_wt, pgm_wt, add_wt):
+    if pgm_model == 0 and cand_pgm_num != 0:
+        pgm_pattern = sum([d * w for d, w in zip(pgm_vect, pgm_wt)])
+    elif pgm_model == 1 and cand_pgm_num != 0:
+        pgm_com_pattern = sum([d * w for d, w in zip(pgm_com, pgm_wt)])
+        pgm_vect_pattern = sum([d * w for d, w in zip(pgm_vect, pgm_wt)])
+        pgm_pattern = sparse.hstack([pgm_com_pattern, pgm_vect_pattern])
+        del pgm_vect_pattern
+    elif pgm_model == 2 and cand_pgm_num != 0:
+        pgm_pattern = sum([d * w for d, w in zip(pgm_com, pgm_wt)])
+    else:
+        print('PGM passed...')
+
     if add_model == 0 and cand_add_num != 0:
-        elem_pattern = sum([d * w for d, w in zip(add_vect, elem_wt)])
+        add_pattern = sum([d * w for d, w in zip(add_vect, add_wt)])
     elif add_model == 1 and cand_add_num != 0:
-        elem_com_pattern = sum([d * w for d, w in zip(add_com, elem_wt)])
-        elem_vect_pattern = sum([d * w for d, w in zip(add_vect, elem_wt)])
-        elem_pattern = sparse.hstack([elem_com_pattern, elem_vect_pattern])
-        del elem_vect_pattern
+        add_com_pattern = sum([d * w for d, w in zip(add_com, add_wt)])
+        add_vect_pattern = sum([d * w for d, w in zip(add_vect, add_wt)])
+        add_pattern = sparse.hstack([add_com_pattern, add_vect_pattern])
+        del add_vect_pattern
     elif add_model == 2 and cand_add_num != 0:
-        elem_pattern = sum([d * w for d, w in zip(add_com, elem_wt)])
+        add_pattern = sum([d * w for d, w in zip(add_com, add_wt)])
     else:
         print('Additive passed...')
-    print(f'elem_pattern_A{add_model}:', elem_pattern.shape, format_size(elem_pattern.data.nbytes))
+    
+    if supp_model == 0 and cand_supp_num != 0:
+        supp_pattern = sum([d * w for d, w in zip(supp_vect, supp_wt)])
+    elif supp_model == 1 and cand_supp_num != 0:
+        supp_com_pattern = sum([d * w for d, w in zip(supp_com, supp_wt)])
+        supp_vect_pattern = sum([d * w for d, w in zip(supp_vect, supp_wt)])
+        supp_pattern = sparse.hstack([supp_com_pattern, supp_vect_pattern])
+        del supp_vect_pattern
+    elif supp_model == 2 and cand_supp_num != 0:
+        supp_pattern = sum([d * w for d, w in zip(supp_com, supp_wt)])
+    else:
+        print('Support passed...')
+
+    if cand_pgm_num != 0 and cand_add_num != 0 and cand_supp_num != 0 and CalT_num == 1:
+        elem_pattern = sparse.hstack([pgm_pattern, add_pattern, supp_pattern, CalT_pattern])
+    elif cand_pgm_num == 0 and cand_add_num != 0 and cand_supp_num != 0 and CalT_num == 1:
+        elem_pattern = sparse.hstack([add_pattern, supp_pattern, CalT_pattern])
+    elif cand_pgm_num == 0 and cand_add_num != 0 and cand_supp_num == 0 and CalT_num == 0:
+        elem_pattern = add_pattern
+    else:
+        elem_pattern = sparse.hstack([pgm_pattern, add_pattern, supp_pattern])
+
+    if cand_pgm_num != 0 and cand_add_num != 0 and cand_supp_num != 0:
+        print(f'elem_pattern_P{pgm_model}A{add_model}S{supp_model}:', elem_pattern.shape, format_size(elem_pattern.data.nbytes))
+    elif cand_pgm_num == 0 and cand_add_num != 0 and cand_supp_num != 0:
+        print(f'elem_pattern_A{add_model}S{supp_model}:', elem_pattern.shape, format_size(elem_pattern.data.nbytes))
+    elif cand_pgm_num != 0 and cand_add_num == 0 and cand_supp_num != 0:
+        print(f'elem_pattern_P{pgm_model}S{supp_model}:', elem_pattern.shape, format_size(elem_pattern.data.nbytes))
+    elif cand_pgm_num == 0 and cand_add_num != 0 and cand_supp_num == 0:
+        print(f'elem_pattern_A{add_model}:', elem_pattern.shape, format_size(elem_pattern.data.nbytes))
+        
     mu = model.predict(elem_pattern)
     sigma = pred_std_csr(elem_pattern, model.estimators_, mu)
     idx_s = sigma == 0
     sigma[idx_s] = 1e-5
-    scores = EI(mu, sigma, cur_max)
+    scores = EI(mu, sigma, cur_min, cur_max)
     if save_depth == -1:
         idx = scores.argsort()[::-1]
     else:
@@ -137,35 +280,26 @@ print('num_workers', num_workers)
 
 PATH1 = 'dump'
 os.makedirs(PATH1, exist_ok = True)
-data_dump_out = f'dump/{data_dump_name}.pkl'
-cat_dump_out = f'dump/{cat_dump_name}.pkl'
+data_pkl = f'dump/data_dump.pkl'
+pkl_out = f'dump/{pkl_name}.pkl'
 
-if idx_from == 0:
+if os.path.exists(data_pkl) and os.path.exists(pkl_out):
+    print(f'gen_data recovered from {data_pkl}')
+    with open(data_pkl, 'rb') as f1:
+        converted = pickle.load(f1)
+    print(f'cand_data recovered from {pkl_out}')
+    with open(pkl_out, 'rb') as f2:
+        catal_cand = pickle.load(f2)
+else:
     converted = gen_data.data_convert(condition)
     catal_cand = gen_data.make_catal_cand(condition, converted)
-    with open(data_dump_out, 'wb') as f1:
+    with open(data_pkl, 'wb') as f1:
         pickle.dump(converted, f1)
-        print(f'data saved as {data_dump_out}')
-    with open(cat_dump_out, 'wb') as f2:
+        print(f'data saved as {data_pkl}')
+    with open(pkl_out, 'wb') as f2:
         pickle.dump(catal_cand, f2)
-        print(f'data saved as {cat_dump_out}')
-    
-    print('Creation of the dump file is complete !!!')
-    myfile = Path(f'{PATH1}/dump_finish.txt')
-    myfile.touch(exist_ok=True)
-else:
-    print('Now Waiting ...')
-    dump_fin_path = f'{PATH1}/dump_finish.txt'
-    while( not( os.path.isfile(dump_fin_path))):
-        time.sleep(1)
-    print('Checked output of dump files !!!')
-    #os.remove(dump_fin_path)
-    print(f'gen_data recovered from {data_dump_out}')
-    with open(data_dump_out, 'rb') as f1:
-        converted = pickle.load(f1)
-    print(f'cand_data recovered from {cat_dump_out}')
-    with open(cat_dump_out, 'rb') as f2:
-        catal_cand = pickle.load(f2)
+        print(f'data saved as {pkl_out}')
+
 
 data_size = get_size('dump')*1e-6
 print(int(data_size),'MB')
@@ -208,18 +342,49 @@ else:
     print('!!!!!!!!!! >>>>>>>>>> ERROR <<<<<<<<<< !!!!!!!!!!')
     sys.exit()
 
-add_model = condition['add_model']
-cand_add_num = condition['cand_add_num']
-target_name = condition['target_name']
+pgm_model, add_model, supp_model = condition['pgm_model'], condition['add_model'], condition['supp_model']
+cand_pgm_num, cand_add_num, cand_supp_num, CalT_num  = condition['cand_pgm_num'], condition['cand_add_num'], condition['cand_supp_num'], condition['CalT_num']
+
+target_temp = condition['target_temp']
+if Reaction == 'rwgs_250' or Reaction == 'rwgs_300' or Reaction == 'CH3OH':
+    target_name = condition['target_name']
+else:
+    pass
 
 save_depth = condition['save_depth']
 catal_comb, elem_wt = catal_cand['catal_comb'], catal_cand['elem_wt']
+if CalT_num != 0:
+    CalT_pattern = catal_cand['CalT_com'][0]
+else:
+    pass
 
-add_com = catal_cand['add_com']
-add_vect = catal_cand['add_vect']
+pgm_wt = elem_wt[:, 0: cand_pgm_num]
+add_wt = elem_wt[:, cand_pgm_num: cand_pgm_num+cand_add_num]
+if cand_supp_num == 1:
+    supp_wt = elem_wt[:, -cand_supp_num]
+else:
+    pass
+
+if cand_pgm_num == 0 and cand_supp_num != 0:
+    add_com, supp_com =  catal_cand['add_com'], catal_cand['supp_com']
+    add_vect, supp_vect =  catal_cand['add_vect'], catal_cand['supp_vect']
+
+elif cand_add_num == 0 and cand_supp_num != 0:
+    pgm_com,  supp_com = catal_cand['pgm_com'], catal_cand['supp_com']
+    pgm_vect, supp_vect = catal_cand['pgm_vect'], catal_cand['supp_vect']
+
+elif  cand_pgm_num == 0 and cand_supp_num == 0:
+    add_com, add_vect = catal_cand['add_com'], catal_cand['add_vect']
+
+elif  cand_add_num == 0 and cand_supp_num == 0:
+    pgm_com, pgm_vect = catal_cand['pgm_com'], catal_cand['pgm_vect']
+
+else:
+    pgm_com, add_com, supp_com = catal_cand['pgm_com'], catal_cand['add_com'], catal_cand['supp_com']
+    pgm_vect, add_vect, supp_vect = catal_cand['pgm_vect'], catal_cand['add_vect'], catal_cand['supp_vect']
 
 feat, target = converted['feat'], converted['target']
-cur_max = target.max()
+cur_max, cur_min = target.max(), target.min()
 
 if idx_from == 0:
     print('-' * 50)
@@ -232,6 +397,8 @@ else:
 
 total_num = len(elem_wt)
 elem_wt = elem_wt[idx_from:idx_to]
+pgm_wt = pgm_wt[idx_from:idx_to]
+add_wt = add_wt[idx_from:idx_to]
 
 alpha = len(elem_wt)/total_num
 print('alpha = ', alpha)
@@ -243,7 +410,7 @@ with timer(f'fitting surrogate : n_jobs=1'):
 
 with timer('prosess_pool', 1.0/alpha):
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        res = executor.map(calc_ei, elem_wt)
+        res = executor.map(calc_ei, elem_wt, pgm_wt, add_wt)
         print('EI value calculations were complete !')
 
 PATH2 = 'cand'
@@ -253,15 +420,57 @@ print(cand.shape)
 cand.to_csv(f'cand/{csv_name}.csv')
 
 if idx_to == total_num:
+    if Reaction == 'rwgs_250_1wt':
+        test_data_sheet = condition['data_sheet_name']
+        train_data_sheet = condition['train_data_sheet_name']
+
+        converted_test = analysis.analysis_data_convert(condition, test_data_sheet, use_models=[pgm_model, add_model, supp_model], idx=None)
+        converted_train = analysis.analysis_data_convert(condition, train_data_sheet, use_models=[pgm_model, add_model, supp_model], idx=None)
+        feat_test, target_test = converted_test['feat'], converted_test['target']
+        feat_train, target_train = converted_train['feat'], converted_train['target']
+        feat_all = pd.concat([feat_train, feat_test], axis=0).reset_index(drop=True)
+        target_all = pd.concat([target_train, target_test], axis=0).reset_index(drop=True)
+        feat_cols = feat_test.columns
+        model  = ExtraTreesRegressor(n_estimators = 100, random_state = 1107, n_jobs = -1)
+        cvf = ShuffleSplit(n_splits = 100, random_state = 1107, test_size = 0.2)
+        #cvf = KFold(n_splits=5, shuffle=True)
+
+        print('1. CV: test_data (New dataset)')
+        analysis.crossvalid(feat_test, target_test, model, cvf)
+        print('2. CV: training_data (396 data points)')
+        analysis.crossvalid(feat_train, target_train, model, cvf)
+        print('3. CV: ALL_data')
+        analysis.crossvalid(feat_all, target_all, model, cvf)
+        print('4. CV: training_data + test_data (Only a part of test_data was used for verification)')
+        analysis.crossvalid_concat(feat_train, feat_test, target_train, target_test, model, cvf)
+    else:
+        pass
     K_cluster = condition['K_cluster']
     subprocess.call(f"python sum_k_clus.py -k {K_cluster}", shell=True)
     print('All calculations and K-cluster calculations have been successfully completed !!')
     
+    extractions = condition['extractions']
+    if len(extractions) != 0:
+        for i in range(len(extractions)):
+            subprocess.call(f"python extract.py -ex {extractions[i]}", shell=True)
+            print(f'K-clustering was attempted by extracting candidate catalysts that contained {extractions[i]}.')
+    else:
+        print('Extractions were NOT performed...')
+    
     print('ML analysis start...')
     PATH = 'Figures'
     os.makedirs(PATH, exist_ok = True)
-    converted = analysis.analysis_data_convert(condition, condition['data_sheet_name'], use_models=[add_model], idx=None)
-    feat, target = converted['feat'], converted['target']
+
+    if Reaction == 'rwgs_250_1wt':
+        converted_test = analysis.analysis_data_convert(condition, condition['data_sheet_name'], use_models=[pgm_model, add_model, supp_model], idx=None)
+        converted_train = analysis.analysis_data_convert(condition, condition['train_data_sheet_name'], use_models=[pgm_model, add_model, supp_model], idx=None)
+        feat_test, target_test = converted_test['feat'], converted_test['target']
+        feat_train, target_train = converted_train['feat'], converted_train['target']
+        feat = pd.concat([feat_train, feat_test], axis=0).reset_index(drop=True)
+        target = pd.concat([target_train, target_test], axis=0).reset_index(drop=True)
+    else:
+        converted = analysis.analysis_data_convert(condition, condition['data_sheet_name'], use_models=[pgm_model, add_model, supp_model], idx=None)
+        feat, target = converted['feat'], converted['target']
 
     feat_cols = feat.columns
     model = ExtraTreesRegressor(n_estimators = 100, random_state = 1107, n_jobs = -1)
